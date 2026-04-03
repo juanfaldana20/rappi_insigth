@@ -1,0 +1,28 @@
+
+# Entornos virtuales de Python
+venv/
+env/
+.venv/
+
+# Archivos compilados de Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Archivos de sistema operativo
+.DS_Store
+Thumbs.db
+
+# Configuración de editores (opcional)
+.vscode/
+.idea/
+*.swp
+
+# Archivos de datos o temporales del proyecto que no deban subirse
+outputs/
+.env.example
+.env
+
+.env
+.env.example
