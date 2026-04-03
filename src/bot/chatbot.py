@@ -1,3 +1,10 @@
+"""
+Controlador Principal del Chatbot.
+
+Se encarga de configurar el agente interactivo usando Gemini Flash 2.5, manejar
+el historial de mensajes (la sesión the modelo), e invocar al ejecutor SQL a través 
+del Function Calling predefinido.
+"""
 import os
 import google.generativeai as genai
 import pandas as pd
@@ -66,7 +73,7 @@ def chat(user_message: str, chat_session: Any, conn: duckdb.DuckDBPyConnection) 
     chart_fig = None
     df_result = None
 
-    # Handle Function Call (query_data)
+    # Procesar llamadas a función (query_data)
     def get_function_call(resp: Any) -> Any:
         """Extrae la respuesta de llamada a función desde la API de Gemini."""
         if not hasattr(resp, "parts"): return None
@@ -81,7 +88,7 @@ def chat(user_message: str, chat_session: Any, conn: duckdb.DuckDBPyConnection) 
     while fcall and i < 5:
         i += 1
         sql = dict(fcall.args).get("sql") if hasattr(fcall.args, "items") else fcall.args["sql"]
-        # Execute query
+        # Ejecutar consulta SQL
         df, err = execute_query(conn, sql)
         
         if err:
@@ -100,7 +107,7 @@ def chat(user_message: str, chat_session: Any, conn: duckdb.DuckDBPyConnection) 
         
         fcall = get_function_call(response)
 
-    # The final text response
+    # Respuesta en texto final
     final_text = response.text
 
     return final_text, chat_session, chart_fig, df_result

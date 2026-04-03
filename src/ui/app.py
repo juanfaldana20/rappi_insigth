@@ -1,3 +1,9 @@
+"""
+Servidor y UI Principal con Streamlit.
+
+Despliega el Dashboard interactivo que acopla el chat conversacional con
+la visualización automática de reportes de operaciones.
+"""
 import streamlit as st
 import os, sys
 
@@ -12,7 +18,7 @@ from src.bot.chatbot import chat
 
 st.set_page_config(page_title="Rappi Insights", layout="wide")
 
-# Load Data
+# Cargar Datos
 @st.cache_resource
 def init_db() -> Tuple[duckdb.DuckDBPyConnection, pd.DataFrame, pd.DataFrame]:
     """Carga los datos por primera vez y los cachea."""
@@ -21,7 +27,7 @@ def init_db() -> Tuple[duckdb.DuckDBPyConnection, pd.DataFrame, pd.DataFrame]:
 
 conn, df_metrics, df_orders = init_db()
 
-# Custom UI
+# Interfaz Personalizada (Streamlit)
 st.title("🍔 Rappi Insights Bot")
 
 if "ui_history" not in st.session_state:
@@ -33,24 +39,24 @@ from src.insights.analyzer import run_full_analysis
 from src.insights.report import generate_report
 import streamlit.components.v1 as components
 
-# Tabs
+# Pestañas (Tabs)
 tab1, tab2 = st.tabs(["Chat", "Insights Automáticos"])
 
 with tab1:
-    # Display chat messages from session state
+    # Mostrar historial de mensajes de la sesión
     for msg in st.session_state.ui_history:
         with st.chat_message(msg["role"]):
             st.write(msg["text"])
 
-    # Chat input
+    # Entrada de chat interactiva
     if prompt := st.chat_input("Pregunta algo sobre las métricas operacionales..."):
-        # User message
+        # Mensaje del usuario
         with st.chat_message("user"):
             st.write(prompt)
 
         st.session_state.ui_history.append({"role": "user", "text": prompt})
 
-        # Bot response
+        # Respuesta interactiva del agente AI
         with st.chat_message("assistant"):
             with st.spinner("Analizando..."):
                 try:

@@ -1,3 +1,11 @@
+"""
+Definición de las herramientas (tools) para Function Calling en Gemini.
+
+Incluye los esquemas en formato JSON / diccionario dictando qué funciones 
+puede invocar el modelo y qué parámetros debe proveer.
+"""
+
+# Tool que le otorga a la IA la capacidad de ejecutar queries SQL.
 query_data_tool = {
     "name": "query_data",
     "description": (

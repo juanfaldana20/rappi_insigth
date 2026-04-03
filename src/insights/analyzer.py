@@ -1,7 +1,18 @@
+"""
+Módulo Analizador de Métricas Operacionales.
+
+Utiliza pandas para aplicar algoritmos de minería de datos básicos tales 
+como detectar anomalías de la última semana (caídas abruptas), tendencias
+prolongadas negativas a lo largo del tiempo, y correlaciones lineales entre variables.
+"""
 import pandas as pd
 from datetime import datetime
 
 def detect_anomalies(df_metrics: pd.DataFrame, threshold: float = 0.10) -> list:
+    """
+    Detecta anomalías operacionales o caídas abruptas semanales.
+    Compara las variables y busca cambios significativos desde la última semana hasta la actual.
+    """
     res = []
     # df_metrics contains L1W_ROLL and L0W_ROLL
     if 'L0W_ROLL' not in df_metrics.columns or 'L1W_ROLL' not in df_metrics.columns:
@@ -29,6 +40,9 @@ def detect_anomalies(df_metrics: pd.DataFrame, threshold: float = 0.10) -> list:
     return res
 
 def detect_declining_trends(df_metrics: pd.DataFrame, min_weeks: int = 3) -> list:
+    """
+    Localiza variables que llevan `min_weeks` continuos en declive (bajada consistente tras semana).
+    """
     res = []
     cols = [f"L{i}W_ROLL" for i in range(min_weeks-1, -1, -1)]
     for c in cols:
@@ -61,6 +75,11 @@ def detect_declining_trends(df_metrics: pd.DataFrame, min_weeks: int = 3) -> lis
     return res
 
 def benchmark_zones(df_metrics: pd.DataFrame, std_threshold: float = 1.5) -> list:
+    """
+    Agrupa datos por tipo de zona y país, para luego marcar las zonas donde
+    su última medición (L0W) sobresalga significativamente por debajo o por encima 
+    de la media (+/- `std_threshold` desviaciones estándar).
+    """
     res = []
     if 'L0W_ROLL' not in df_metrics.columns:
         return res
@@ -97,6 +116,10 @@ def benchmark_zones(df_metrics: pd.DataFrame, std_threshold: float = 1.5) -> lis
     return res
 
 def find_correlations(df_metrics: pd.DataFrame, min_correlation: float = 0.6) -> list:
+    """
+    Determina cómo guardan correlaciones las distintas métricas tabuladas.
+    Calcula una matriz de correlación cruzada (filtro general de Pearson).
+    """
     res = []
     if 'L0W_ROLL' not in df_metrics.columns:
         return res
@@ -128,6 +151,10 @@ def find_correlations(df_metrics: pd.DataFrame, min_correlation: float = 0.6) ->
     return res
 
 def run_full_analysis(df_metrics: pd.DataFrame, df_orders: pd.DataFrame) -> dict:
+    """
+    Función orquestadora que ejecuta todos los cálculos de insights de forma masiva
+    y junta los resultados estructurados en un solo diccionario final.
+    """
     return {
         "anomalies": detect_anomalies(df_metrics),
         "declining_trends": detect_declining_trends(df_metrics),

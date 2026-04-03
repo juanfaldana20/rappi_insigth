@@ -1,3 +1,10 @@
+"""
+Motor de ejecución del Chatbot.
+
+Se encarga de ejecutar sentencias SQL generadas por la IA en DuckDB
+y de seleccionar la representación gráfica (Plotly) adecuada según 
+la conformación del conjunto de datos retornado.
+"""
 import pandas as pd
 import duckdb
 import plotly.express as px
@@ -28,18 +35,18 @@ def decide_chart(df: pd.DataFrame) -> Optional[Any]:
 
     columns = list(df.columns)
     
-    # helper counts
+    # Contadores auxiliares para tipos de columnas
     num_cols = [c for c in columns if pd.api.types.is_numeric_dtype(df[c])]
     cat_cols = [c for c in columns if not pd.api.types.is_numeric_dtype(df[c])]
 
-    # 1. Columna `week` presente + una métrica + varias zonas -> Línea (tendencia temporal)
-    # usually categorical features like 'ZONE', 'COUNTRY', 'CITY' along with 'week' mapping to a value.
+    # 1. Columna `week` presente + una métrica + varias zonas -> Gráfico de Línea temporal
+    # Usualmente variables categóricas junto al campo temporal mapean a un valor continuo
     if 'week' in [c.lower() for c in columns]:
         week_col = next(c for c in columns if c.lower() == 'week')
         if len(num_cols) == 1 and len(cat_cols) >= 2:
             color_col = next((c for c in cat_cols if c != week_col), None)
             if color_col:
-                # Sort explicitly if week is strings like L8W, L7W etc.
+                # Ordenamiento explícito para strings de tipo semana "L8W", "L7W"
                 df_sorted = df.sort_values(by=week_col, key=lambda x: x.str.extract(r'L(\d+)W').astype(int)[0], ascending=False)
                 fig = px.line(df_sorted, x=week_col, y=num_cols[0], color=color_col, title="Tendencia temporal")
                 return fig
@@ -60,7 +67,7 @@ def decide_chart(df: pd.DataFrame) -> Optional[Any]:
         fig = px.bar(df_sorted, y=cat_cols[0], x=num_cols[0], orientation='h', title="Ranking")
         return fig
 
-    # If it's a simple 1 cat 1 num but < 20 rows, we don't strictly *have* to chart according to the prompt (says "Cualquier otro caso - Sin gráfico").
-    # But usually a bar chart is nice. Let's strictly follow the table.
+    # Otros casos que no cuadran con lógica fuerte no generan gráfico,
+    # apoyando al LLM a simplemente tabular o describir.
     
     return None

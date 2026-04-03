@@ -1,3 +1,10 @@
+"""
+Generador de Reportes Narrativos Asistido por IA.
+
+Renderiza hallazgos crudos y datos cuantitativos de alertas tempranas 
+y los transforma en HTML limpio, interpretando y diagnosticando 
+los resultados con Gemini.
+"""
 import os
 import json
 import google.generativeai as genai
@@ -8,8 +15,12 @@ load_dotenv()
 genai.configure(api_key=os.environ.get("GEMINI_API_KEY", ""))
 
 def generate_report(analysis_results: dict) -> str:
-    # prompt gemini
-    # Extract top findings for the model context limits and concise summary
+    """
+    Solicita un reporte sumario exhaustivo a la IA y une el texto resultante con
+    templado HTML, empaquetándolo para ser servido a la interfaz local o decargarlo.
+    """
+    # Enviar prompt a Gemini
+    # Extraer los hallazgos principales previniendo límites de contexto
     prompt_data = {
         "anomalies": analysis_results["anomalies"][:20],
         "declining_trends": analysis_results["declining_trends"][:20],
@@ -30,7 +41,7 @@ Datos de la semana:
         ai_response = model.generate_content(prompt)
         narrative = ai_response.text.strip()
         
-        # Remove markdown format if model decides to use it
+        # Eliminar formato markdown si el modelo lo inyecta accidentalmente
         if narrative.startswith("```html"):
             narrative = narrative[7:]
         elif narrative.startswith("```"):
@@ -40,7 +51,7 @@ Datos de la semana:
     except Exception as e:
         narrative = f"<p><strong>Error generando narrativa con IA:</strong> {e}</p>"
         
-    # Render template
+    # Renderizar el archivo HTML de la plantilla Jinja2
     loader = FileSystemLoader(os.path.join(os.path.dirname(__file__), '../../templates'))
     jinja_env = Environment(loader=loader)
     template = jinja_env.get_template('report.html')

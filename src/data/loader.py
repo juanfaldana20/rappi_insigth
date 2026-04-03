@@ -1,36 +1,49 @@
+"""
+Módulo de carga y procesamiento de datos.
+
+Este módulo lee los datos operacionales de un archivo Excel, transforma las tablas 
+(unpivoting) para facilitar consultas temporales complejas, y las carga en una base 
+de datos DuckDB en memoria.
+"""
 import pandas as pd
 import duckdb
 from typing import Tuple, Any
 
-# Global connection to act as singleton
+# Conexión global a DuckDB para operar como patrón Singleton
 _CONN = None
 
 def load_data(file_path: str = 'data/dummy_data.xlsx') -> Tuple[duckdb.DuckDBPyConnection, pd.DataFrame, pd.DataFrame]:
     """
-    Load data from Excel into duckdb connection and return the connection along with DataFrames.
-    If the connection is already initialized, returns it directly.
+    Carga datos desde un archivo Excel a una conexión DuckDB en memoria.
+    
+    Lee las pestañas 'RAW_INPUT_METRICS' y 'RAW_ORDERS', transforma las columnas
+    temporales al formato largo (melt) y las registra en DuckDB.
+    
+    Args:
+        file_path (str): Ruta al archivo Excel con los datos fuente.
+        
+    Returns:
+        Tuple: Contiene la conexión a DuckDB, el DataFrame de métricas y el de órdenes.
     """
     global _CONN
     if _CONN is not None:
-        # Returning None for dataframes when connection already initialized 
-        # (or one could store them globally too)
-        # However, for simplicity returning what's needed.
+        # Si la base de datos ya está inicializada, se omite recargarla.
         pass
 
     try:
-        # Read the excel sheets
+        # Leer hojas de cálculo
         df_metrics = pd.read_excel(file_path, sheet_name='RAW_INPUT_METRICS')
         df_orders = pd.read_excel(file_path, sheet_name='RAW_ORDERS')
     except Exception as e:
-        print(f"Error loading Excel file: {e}")
+        print(f"Error cargando archivo Excel: {e}")
         raise e
 
-    # Create duckdb connection in memory
+    # Crear conexión DuckDB en memoria RAM
     conn = duckdb.connect(database=':memory:')
 
-    # Unpivot/melt metrics
+    # Transformar DataFrame de métricas usando melt (De ancho a largo)
     week_cols_metrics = [f"L{i}W_ROLL" for i in range(8, -1, -1)]
-    # Keep only the columns that exist in case the data doesn't perfectly match
+    # Conservar solo columnas que realmente existen en el archivo
     week_cols_metrics_exist = [col for col in week_cols_metrics if col in df_metrics.columns]
     
     df_metrics_long = df_metrics.melt(
@@ -40,7 +53,7 @@ def load_data(file_path: str = 'data/dummy_data.xlsx') -> Tuple[duckdb.DuckDBPyC
         value_name="value"
     )
     
-    # Unpivot/melt orders
+    # Transformar DataFrame de órdenes usando melt (De ancho a largo)
     week_cols_orders = [f"L{i}W" for i in range(8, -1, -1)]
     week_cols_orders_exist = [col for col in week_cols_orders if col in df_orders.columns]
 
@@ -51,7 +64,7 @@ def load_data(file_path: str = 'data/dummy_data.xlsx') -> Tuple[duckdb.DuckDBPyC
         value_name="value"
     )
 
-    # Register all tables
+    # Registrar las 4 tablas en DuckDB (Anchas y Largas)
     conn.register("metrics", df_metrics)
     conn.register("metrics_long", df_metrics_long)
     conn.register("orders", df_orders)
@@ -62,7 +75,10 @@ def load_data(file_path: str = 'data/dummy_data.xlsx') -> Tuple[duckdb.DuckDBPyC
 
 def get_schema_info(conn: duckdb.DuckDBPyConnection = None) -> str:
     """
-    Returns the schema of the duckdb database in plain text.
+    Construye y devuelve una representación en texto del esquema de base de datos.
+    
+    Esta información es inyectada en el prompt del LLM para que el bot comprenda
+    qué datos puede consultar mediante SQL.
     """
     if conn is None:
         conn = _CONN
@@ -71,7 +87,7 @@ def get_schema_info(conn: duckdb.DuckDBPyConnection = None) -> str:
 
     schema_info = []
     
-    # metrics table
+    # Tabla ancha de métricas
     schema_info.append("Table: metrics")
     schema_info.append("- COUNTRY: string (AR, BR, CL, CO, CR, EC, MX, PE, UY)")
     schema_info.append("- CITY: string")
@@ -82,14 +98,14 @@ def get_schema_info(conn: duckdb.DuckDBPyConnection = None) -> str:
     schema_info.append("- L8W_ROLL to L0W_ROLL: float (Valores de las últimas semanas, L0W_ROLL es la actual)")
     schema_info.append("")
 
-    # metrics_long table
+    # Tabla larga de métricas unpivoteadas
     schema_info.append("Table: metrics_long (Unpivoted metrics)")
     schema_info.append("- COUNTRY, CITY, ZONE, ZONE_TYPE, ZONE_PRIORITIZATION, METRIC: string")
     schema_info.append("- week: string (ej. L8W_ROLL, L0W_ROLL)")
     schema_info.append("- value: float")
     schema_info.append("")
 
-    # orders table
+    # Tabla ancha de órdenes
     schema_info.append("Table: orders")
     schema_info.append("- COUNTRY: string")
     schema_info.append("- CITY: string")
@@ -98,7 +114,7 @@ def get_schema_info(conn: duckdb.DuckDBPyConnection = None) -> str:
     schema_info.append("- L8W to L0W: float (Órdenes de las últimas semanas)")
     schema_info.append("")
 
-    # orders_long table
+    # Tabla larga de órdenes unpivoteadas
     schema_info.append("Table: orders_long (Unpivoted orders)")
     schema_info.append("- COUNTRY, CITY, ZONE, METRIC: string")
     schema_info.append("- week: string (ej. L8W, L0W)")
